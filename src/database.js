@@ -17,11 +17,18 @@ const CATEGORY_WEIGHT = parseFloat(process.env.CATEGORY_WEIGHT || 0.2);
 const SOURCE_WEIGHT = parseFloat(process.env.SOURCE_WEIGHT || 0.2);
 const RECENCY_WEIGHT = parseFloat(process.env.RECENCY_WEIGHT || 0.2);
 const INTERACTION_DECAY_DAYS = parseFloat(process.env.INTERACTION_DECAY_DAYS || 30);
+const KEYWORD_PROFILE_MIN_WEIGHT = parseFloat(process.env.KEYWORD_PROFILE_MIN_WEIGHT || 0.2);
+const VIEW_FATIGUE_FACTOR = parseFloat(process.env.VIEW_FATIGUE_FACTOR || 0.2);
 
 // Read interaction weights from environment variables or use defaults
 const THUMBS_UP_WEIGHT = parseFloat(process.env.THUMBS_UP_WEIGHT || 5.0);
 const THUMBS_DOWN_WEIGHT = parseFloat(process.env.THUMBS_DOWN_WEIGHT || -3.0);
 const CLICK_WEIGHT = parseFloat(process.env.CLICK_WEIGHT || 1.0);
+
+// Read "Just in" BOOST parameters from environment variables or use defaults
+const JUST_IN_BOOST_WEIGHT = parseFloat(process.env.JUST_IN_BOOST_WEIGHT || 5.0);
+const JUST_IN_MIN_KEYWORD_MATCHES = parseInt(process.env.JUST_IN_MIN_KEYWORD_MATCHES || 2);
+const JUST_IN_MAX_VIEWS = parseInt(process.env.JUST_IN_MAX_VIEWS || 5);
 
 const DB_FILE = path.join(process.cwd(), 'storage', 'news.db');
 
@@ -265,7 +272,14 @@ function buildKeywordProfile() {
                 const keywords = JSON.parse(interaction.keywords || '[]');
                 keywords.forEach(keyword => {
                     const keywordWeight = profile.keywords.get(keyword) || 0;
-                    profile.keywords.set(keyword, keywordWeight + weight);
+                    const newWeight = keywordWeight + weight;
+                    // Only keep keywords with positive weights
+                    if (newWeight > 0) {
+                        profile.keywords.set(keyword, newWeight);
+                    } else {
+                        // Remove keywords with zero or negative weights
+                        profile.keywords.delete(keyword);
+                    }
                 });
             } catch (e) {
                 console.error(`Error parsing keywords for article ${interaction.id}:`, e);
@@ -279,7 +293,8 @@ function buildKeywordProfile() {
     const sortMapByWeight = map => 
         [...map.entries()]
             .sort((a, b) => b[1] - a[1])
-            .map(([name, weight]) => ({ name, weight }));
+            .map(([name, weight]) => ({ name, weight }))
+            .filter(item => item.weight >= KEYWORD_PROFILE_MIN_WEIGHT);
     
     const result = {
         keywords: sortMapByWeight(profile.keywords),
@@ -375,8 +390,47 @@ function scoreArticle(article, profile) {
         console.error(`Error getting interaction score for article ${article.id}:`, e);
     }
     
+    // 6. "Just in" BOOST - applies to new articles with sufficient keyword matches
+    let justInBoost = 0;
+    try {
+        // Get the article's view count (defaults to 0 if not set)
+        const viewCount = article.view_count || 0;
+        
+        // Apply the boost if the article has been viewed less than the max views
+        // and has at least the minimum number of keyword matches
+        if (viewCount < JUST_IN_MAX_VIEWS && keywordMatchCount >= JUST_IN_MIN_KEYWORD_MATCHES) {
+            // Linear decay based on view count
+            const viewDecayFactor = 1 - (viewCount / JUST_IN_MAX_VIEWS);
+            justInBoost = JUST_IN_BOOST_WEIGHT * viewDecayFactor;
+            
+            // Log when an article gets boosted for debugging
+            if (justInBoost > 0) {
+                console.log(`Article ${article.id} "${article.title}" received "Just in" BOOST of ${justInBoost.toFixed(2)} (${keywordMatchCount} keyword matches, ${viewCount}/${JUST_IN_MAX_VIEWS} views)`);
+            }
+        }
+    } catch (e) {
+        console.error(`Error calculating "Just in" BOOST for article ${article.id}:`, e);
+    }
+    
+    // 7. View fatigue score - applies a penalty for articles that have been viewed multiple times
+    let viewFatigueScore = 0;
+    try {
+        const viewCount = article.view_count || 0;
+        if (viewCount > 0) {
+            // Apply increasing penalty based on view count
+            viewFatigueScore = -Math.pow(viewCount, 1.5) * VIEW_FATIGUE_FACTOR;
+            
+            // Log significant fatigue penalties for debugging
+            if (viewFatigueScore < -1) {
+                console.log(`Article ${article.id} "${article.title}" received view fatigue penalty of ${viewFatigueScore.toFixed(2)} (${viewCount} views)`);
+            }
+        }
+    } catch (e) {
+        console.error(`Error calculating view fatigue for article ${article.id}:`, e);
+    }
+    
     // Calculate total score - now add the components directly since weights are already applied
-    const totalScore = keywordScore + sourceScore + categoryScore + recencyScore + interactionScore;
+    const totalScore = keywordScore + sourceScore + categoryScore + recencyScore + interactionScore + justInBoost + viewFatigueScore;
     
     return {
         keywordScore,
@@ -384,6 +438,8 @@ function scoreArticle(article, profile) {
         categoryScore,
         recencyScore,
         interactionScore,
+        justInBoost,
+        viewFatigueScore,
         keywordMatchCount,
         totalScore
     };
@@ -513,12 +569,34 @@ function trackInteraction(articleId, type) {
     try {
         if (!db) initializeDatabase();
         
+        // Get the article's current view count to check if it's still in "Just in" BOOST phase
+        const article = db.prepare('SELECT view_count FROM articles WHERE id = ?').get(articleId);
+        
+        // Determine if the article is currently boosted (view count less than max views)
+        const isBoosted = article && article.view_count < JUST_IN_MAX_VIEWS;
+        
+        // Apply a bonus for interactions with boosted articles
+        let interactionMultiplier = 1.0;
+        if (isBoosted) {
+            // Apply a 50% bonus for interacting with a boosted article
+            interactionMultiplier = 1.5;
+            console.log(`Enhanced interaction reward (${interactionMultiplier}x) for boosted article ${articleId}`);
+        }
+        
+        // Store the interaction with type and bonus info in metadata
         const stmt = db.prepare(`
-            INSERT INTO article_interactions (article_id, interaction_type)
-            VALUES (?, ?)
+            INSERT INTO article_interactions (article_id, interaction_type, metadata)
+            VALUES (?, ?, ?)
         `);
         
-        stmt.run(articleId, type);
+        // Store metadata about the interaction
+        const metadata = JSON.stringify({
+            boosted: isBoosted,
+            multiplier: interactionMultiplier,
+            viewCount: article ? article.view_count : null
+        });
+        
+        stmt.run(articleId, type, metadata);
         return { success: true };
     } catch (error) {
         console.error('Error tracking interaction:', error);
@@ -594,6 +672,8 @@ function getRecommendedArticles(options = {}) {
                 category_score: scores.categoryScore,
                 recency_score: scores.recencyScore,
                 interaction_score: scores.interactionScore,
+                justInBoost: scores.justInBoost,
+                viewFatigueScore: scores.viewFatigueScore,
                 keywordMatchCount: scores.keywordMatchCount,
                 final_score: scores.totalScore
             };

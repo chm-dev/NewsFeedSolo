@@ -58,8 +58,10 @@
               <h4 class="text-sm font-medium text-gray-700 mb-1">Top Keywords</h4>
               <div class="flex flex-wrap gap-1">
                 <span v-for="keyword in userProfile.keywords.slice(0, 16)" :key="keyword.name"
-                  class="px-2 py-1 rounded-full bg-blue-100 text-xs text-blue-700">
-                  {{ keyword.name }} ({{ keyword.weight.toFixed(1) }})
+                  class="px-2 py-1 rounded-full text-xs flex items-center"
+                  :class="getKeywordClass(keyword.name)">
+                  {{ keyword.name }} 
+                  <span class="ml-1 font-medium">{{ keyword.weight.toFixed(1) }}</span>
                 </span>
               </div>
             </div>
@@ -120,6 +122,13 @@
                   <span class="truncate">{{ article.feed_title }}</span>
                   <span class="mx-2 flex-shrink-0">•</span>
                   <span class="flex-shrink-0">{{ formatDate(article.published_at) }}</span>
+                  <span v-if="article.view_count !== undefined" class="flex items-center ml-auto">
+                    <svg class="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    <span class="text-xs">{{ article.view_count }}</span>
+                  </span>
                 </div>
                 <h3 class="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">{{ article.title }}</h3>
                 <p class="text-gray-600 text-sm line-clamp-3 mb-3">{{ article.description }}</p>
@@ -129,11 +138,12 @@
                   <div class="text-xs text-gray-500 mb-1">Keywords:</div>
                   <div class="flex flex-wrap gap-1">
                     <span v-for="(keyword, idx) in parseKeywords(article)" :key="`${article.id}-${idx}`"
-                          :class="[
-                            'px-2 py-1 rounded-full text-xs',
-                            keywordMatch(keyword) ? 'bg-blue-100 text-blue-700 font-medium' : 'bg-gray-100 text-gray-600'
-                          ]">
+                          class="px-2 py-1 rounded-full text-xs flex items-center"
+                          :class="getKeywordClass(keyword)">
                       {{ keyword }}
+                      <span v-if="getKeywordWeight(keyword) !== null" class="ml-1 font-medium">
+                        {{ getKeywordWeight(keyword).toFixed(1) }}
+                      </span>
                     </span>
                   </div>
                 </div>
@@ -153,6 +163,12 @@
                     </span>
                     <span v-if="article.recency_score !== undefined" class="text-gray-600">
                       Recency: {{ Number(article.recency_score).toFixed(1) }}
+                    </span>
+                    <span v-if="article.viewFatigueScore !== undefined && article.viewFatigueScore < 0" class="text-red-600">
+                      Fatigue: {{ Number(article.viewFatigueScore).toFixed(1) }}
+                    </span>
+                    <span v-if="article.justInBoost !== undefined && article.justInBoost > 0" class="text-purple-600 font-medium">
+                      Just In: {{ Number(article.justInBoost).toFixed(1) }}
                     </span>
                     <span class="font-bold text-blue-600">
                       Total: {{ Number(article.final_score).toFixed(1) }}
@@ -248,6 +264,32 @@ function keywordMatch(keyword) {
   
   const match = userProfile.value.keywords.find(k => k.name === keyword);
   return match && match.weight > 0;
+}
+
+// Function to determine color class based on keyword weight
+function getKeywordClass(keyword) {
+  if (!userProfile.value || !userProfile.value.keywords) return 'bg-gray-100 text-gray-600';
+  
+  const match = userProfile.value.keywords.find(k => k.name === keyword);
+  if (!match) return 'bg-gray-100 text-gray-600';
+  
+  if (match.weight >= 3) {
+    return 'bg-blue-300 text-blue-800'; // Higher weight
+  } else if (match.weight >= 1) {
+    return 'bg-blue-200 text-blue-800'; // Medium weight
+  } else if (match.weight > 0) {
+    return 'bg-blue-100 text-blue-800'; // Lower weight
+  } else {
+    return 'bg-gray-100 text-gray-600'; // No weight or negative
+  }
+}
+
+// Function to get keyword weight from user profile
+function getKeywordWeight(keyword) {
+  if (!userProfile.value || !userProfile.value.keywords) return null;
+  
+  const match = userProfile.value.keywords.find(k => k.name === keyword);
+  return match ? match.weight : null;
 }
 
 async function fetchUserProfile() {

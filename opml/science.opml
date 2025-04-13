@@ -15,6 +15,8 @@
             <outline text="New Scientist" title="New Scientist" type="rss" xmlUrl="https://www.newscientist.com/feed/home/" htmlUrl="https://www.newscientist.com" />
             <outline text="MIT Technology Review" title="MIT Technology Review" type="rss" xmlUrl="https://www.technologyreview.com/feed/" htmlUrl="https://www.technologyreview.com" />
             <outline text="Frontiers in Psychology" title="Frontiers in Psychology" type="rss" xmlUrl="https://www.frontiersin.org/journals/psychology/rss" htmlUrl="https://www.frontiersin.org/journals/psychology" />
+            <outline text="Frontiers in Neuroscience" title="Frontiers in Neuroscience" type="rss" xmlUrl="https://www.frontiersin.org/journals/neuroscience/rss" htmlUrl="https://www.frontiersin.org/journals/neuroscience" />
+            <outline text="NASA" title="NASA" type="rss" xmlUrl="https://science.nasa.gov/feed/" htmlUrl="https://www.nasa.gov" />
             
         </outline>
     </body>

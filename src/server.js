@@ -45,6 +45,31 @@ app.get('/api/articles', async (req, res) => {
     }
 });
 
+// Get a specific article by ID and increment view count
+app.get('/api/articles/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Get the article
+        const article = db.prepare('SELECT * FROM articles WHERE id = ?').get(id);
+        
+        if (!article) {
+            return res.status(404).json({ error: 'Article not found' });
+        }
+        
+        // Increment the view count
+        db.prepare('UPDATE articles SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?').run(id);
+        
+        // Return the article with the updated view count
+        article.view_count = (article.view_count || 0) + 1;
+        
+        res.json(article);
+    } catch (error) {
+        console.error(`Error fetching article ${req.params.id}:`, error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Get available categories
 app.get('/api/categories', async (req, res) => {
     try {
@@ -63,7 +88,7 @@ app.get('/api/categories', async (req, res) => {
     }
 });
 
-// Get recommended articles
+// Get personalized article recommendations
 app.get('/api/recommendations', async (req, res) => {
     try {
         const { limit = 30, offset = 0 } = req.query;
@@ -71,6 +96,26 @@ app.get('/api/recommendations', async (req, res) => {
             limit: parseInt(limit),
             offset: parseInt(offset)
         });
+        
+        // Track view counts for all articles in the response
+        if (articles && articles.length > 0) {
+            const updateViewCountStmt = db.prepare('UPDATE articles SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?');
+            
+            const updateTransaction = db.transaction((articleIds) => {
+                for (const id of articleIds) {
+                    updateViewCountStmt.run(id);
+                }
+            });
+            
+            // Execute the updates in a transaction for better performance
+            updateTransaction(articles.map(article => article.id));
+            
+            // Update the view counts in the response objects
+            articles.forEach(article => {
+                article.view_count = (article.view_count || 0) + 1;
+            });
+        }
+        
         res.json(articles);
     } catch (error) {
         console.error('Error fetching recommendations:', error);
@@ -88,6 +133,25 @@ app.get('/api/articles/:id/similar', async (req, res) => {
             parseInt(id),
             parseInt(limit)
         );
+        
+        // Track view counts for all articles in the response
+        if (similarArticles && similarArticles.length > 0) {
+            const updateViewCountStmt = db.prepare('UPDATE articles SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?');
+            
+            const updateTransaction = db.transaction((articleIds) => {
+                for (const id of articleIds) {
+                    updateViewCountStmt.run(id);
+                }
+            });
+            
+            // Execute the updates in a transaction for better performance
+            updateTransaction(similarArticles.map(article => article.id));
+            
+            // Update the view counts in the response objects
+            similarArticles.forEach(article => {
+                article.view_count = (article.view_count || 0) + 1;
+            });
+        }
         
         res.json(similarArticles);
     } catch (error) {
@@ -157,8 +221,8 @@ app.get('/api/admin/stats', async (req, res) => {
             interactions,
             profile: {
                 keywordCount: profile.keywords.length,
-                topKeywords: profile.keywords.slice(0, 10),
-                categoryPreferences: profile.categories
+                keywords: profile.keywords,     
+                categoryPreferences: profile.categories             
             }
         });
     } catch (error) {
