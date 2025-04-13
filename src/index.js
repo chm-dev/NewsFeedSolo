@@ -8,7 +8,7 @@ import { parseOpmlDirectory } from './opmlParser.js';
 import { fetchFeeds } from './rssFetcher.js';
 import { fetchContent } from './contentFetcher.js';
 import { extractArticleContent } from './articleExtractor.js';
-import { storeArticle } from './database.js';
+import { storeArticle } from './storage.js';
 import path from 'path';
 
 // Configuration

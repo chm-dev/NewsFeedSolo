@@ -2,28 +2,17 @@
  * Storage Module
  * 
  * This module is responsible for storing and retrieving article data.
- * It uses SQLite database for storage while maintaining compatibility
- * with the existing API.
+ * It uses SQLite database for storage.
  */
 
-import { promises as fs } from 'fs';
 import path from 'path';
 import { storeArticle as dbStoreArticle, createMetadata, initializeDatabase } from './database.js';
 
-// Base storage directory
+// Base storage directory - kept for backward compatibility when forming paths
 export const STORAGE_DIR = path.join(process.cwd(), 'storage');
 
 // Initialize database
 initializeDatabase();
-
-/**
- * Ensure a directory exists, creating it if necessary
- * @param {string} dirPath - Path to the directory
- * @returns {Promise<void>}
- */
-export async function ensureDir(dirPath) {
-    await fs.mkdir(dirPath, { recursive: true });
-}
 
 /**
  * Store an article to the database
@@ -68,11 +57,11 @@ export async function storeArticle(article) {
 }
 
 /**
- * Create a metadata file for a batch of articles
+ * Create a metadata record for a batch of articles
  * @param {string} category - Category name
  * @param {string} dateStr - Date string (YYYY-MM-DD)
  * @param {Array} results - Array of storage results
- * @returns {Promise<Object>} - Result with status and path
+ * @returns {Promise<Object>} - Result with status
  */
 export async function createMetadataFile(category, dateStr, results) {
     try {
@@ -83,32 +72,12 @@ export async function createMetadataFile(category, dateStr, results) {
             throw new Error(dbMetadata.error);
         }
 
-        // Create the metadata directory for backward compatibility
-        const metadataDir = path.join(STORAGE_DIR, category, dateStr);
-        await ensureDir(metadataDir);
-
-        // Create the metadata content
-        const metadata = {
-            ...dbMetadata.metadata,
-            articles: results.map(r => ({
-                title: r.article.title,
-                source: r.article.feedTitle,
-                success: r.success,
-                path: r.success ? r.path : null,
-                error: r.error || null
-            }))
-        };
-
-        // Write the metadata file for backward compatibility
-        const metadataPath = path.join(metadataDir, 'metadata.json');
-        await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
-
         return {
             success: true,
-            path: metadataPath
+            metadata: dbMetadata.metadata
         };
     } catch (error) {
-        console.error(`Error creating metadata file:`, error);
+        console.error(`Error creating metadata:`, error);
         return {
             success: false,
             error: error.message

@@ -49,6 +49,48 @@
           </button>
         </nav>
 
+        <!-- Profile Panel (shown only on FOR YOU page) -->
+        <div v-if="isForYou && userProfile" class="mb-6 px-4 sm:px-0">
+          <div class="bg-white p-4 rounded-lg shadow-sm">
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Your Interest Profile</h3>
+            
+            <div v-if="userProfile.keywords?.length > 0" class="mb-3">
+              <h4 class="text-sm font-medium text-gray-700 mb-1">Top Keywords</h4>
+              <div class="flex flex-wrap gap-1">
+                <span v-for="keyword in userProfile.keywords.slice(0, 16)" :key="keyword.name"
+                  class="px-2 py-1 rounded-full bg-blue-100 text-xs text-blue-700">
+                  {{ keyword.name }} ({{ keyword.weight.toFixed(1) }})
+                </span>
+              </div>
+            </div>
+            
+            <div v-if="userProfile.categories?.length > 0" class="mb-3">
+              <h4 class="text-sm font-medium text-gray-700 mb-1">Category Preferences</h4>
+              <div class="flex flex-wrap gap-1">
+                <span v-for="category in userProfile.categories" :key="category.name"
+                  class="px-2 py-1 rounded-full bg-green-100 text-xs text-green-700">
+                  {{ category.name }} ({{ category.weight.toFixed(1) }})
+                </span>
+              </div>
+            </div>
+            
+            <div v-if="userProfile.sources?.length > 0" class="mb-3">
+              <h4 class="text-sm font-medium text-gray-700 mb-1">Source Preferences</h4>
+              <div class="flex flex-wrap gap-1">
+                <span v-for="source in userProfile.sources.slice(0, 5)" :key="source.name"
+                  class="px-2 py-1 rounded-full bg-purple-100 text-xs text-purple-700">
+                  {{ source.name }} ({{ source.weight.toFixed(1) }})
+                </span>
+              </div>
+            </div>
+            
+            <p class="text-xs text-gray-500 mt-2">
+              This profile is built automatically based on your article interactions.
+              The more you interact with articles (clicking, rating), the more personalized your feed becomes.
+            </p>
+          </div>
+        </div>
+
         <!-- Articles Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4 sm:px-0">
           <article 
@@ -86,36 +128,34 @@
                 <div v-if="article.keywords" class="mb-2">
                   <div class="text-xs text-gray-500 mb-1">Keywords:</div>
                   <div class="flex flex-wrap gap-1">
-                    <span v-for="keyword in JSON.parse(article.keywords)" :key="keyword"
-                          class="px-2 py-1 rounded-full bg-gray-100 text-xs text-gray-600">
+                    <span v-for="(keyword, idx) in parseKeywords(article)" :key="`${article.id}-${idx}`"
+                          :class="[
+                            'px-2 py-1 rounded-full text-xs',
+                            keywordMatch(keyword) ? 'bg-blue-100 text-blue-700 font-medium' : 'bg-gray-100 text-gray-600'
+                          ]">
                       {{ keyword }}
                     </span>
                   </div>
                 </div>
 
-                <!-- Topics -->
-                <div v-if="article.topic_indices" class="mb-2">
-                  <div class="text-xs text-gray-500 mb-1">Related Topics:</div>
-                  <div class="flex flex-wrap gap-1">
-                    <span v-for="(topicId, idx) in getArticleTopicsWithScores(article)" :key="topicId.id"
-                          class="px-2 py-1 rounded-full bg-blue-100 text-xs text-blue-600">
-                      Topic {{ topicId.id }} [{{ topicId.score.toFixed(2) }}]
-                    </span>
-                  </div>
-                </div>
-
-                <!-- Article Score -->
-                <div v-if="article.topic_scores" class="mb-2">
-                  <div class="text-xs text-gray-500 mb-1">Article Score:</div>
+                <!-- Article Score (only in recommendations) -->
+                <div v-if="isForYou && article.final_score" class="mb-2">
+                  <div class="text-xs text-gray-500 mb-1">Relevance Scores:</div>
                   <div class="flex flex-wrap gap-2 text-xs">
-                    <span class="text-gray-600">
-                      Topic Score: {{ article.topic_score || 0 }}
+                    <span v-if="article.keyword_score !== undefined" class="text-gray-600">
+                      Keywords: {{ Number(article.keyword_score).toFixed(1) }}
                     </span>
-                    <span class="text-gray-600">
-                      Interaction Score: {{ article.direct_interaction_score || 0 }}
+                    <span v-if="article.category_score !== undefined" class="text-gray-600">
+                      Category: {{ Number(article.category_score).toFixed(1) }}
+                    </span>
+                    <span v-if="article.source_score !== undefined" class="text-gray-600">
+                      Source: {{ Number(article.source_score).toFixed(1) }}
+                    </span>
+                    <span v-if="article.recency_score !== undefined" class="text-gray-600">
+                      Recency: {{ Number(article.recency_score).toFixed(1) }}
                     </span>
                     <span class="font-bold text-blue-600">
-                      Total: {{ article.final_score || 0 }}
+                      Total: {{ Number(article.final_score).toFixed(1) }}
                     </span>
                   </div>
                   <div class="text-xs text-gray-500 mt-1">
@@ -174,7 +214,7 @@ const hasMoreArticles = ref(true);
 const sortBy = ref('stored_at');
 const isForYou = ref(true); // Changed to true by default
 const userInteractions = ref(new Map());
-const topics = ref([]); // Add topics state
+const userProfile = ref(null);
 
 const LIMIT = 30;
 
@@ -188,6 +228,35 @@ function hasInteraction(articleId, type) {
 
 function handleImageError(event) {
   event.target.style.display = 'none';
+}
+
+function parseKeywords(article) {
+  try {
+    if (article.keywords) {
+      return JSON.parse(article.keywords).slice(0, 10); // Limit to 10 keywords
+    }
+    return [];
+  } catch (e) {
+    console.error('Error parsing keywords:', e);
+    return [];
+  }
+}
+
+function keywordMatch(keyword) {
+  // Check if keyword is in user's profile with a positive weight
+  if (!userProfile.value || !userProfile.value.keywords) return false;
+  
+  const match = userProfile.value.keywords.find(k => k.name === keyword);
+  return match && match.weight > 0;
+}
+
+async function fetchUserProfile() {
+  try {
+    const response = await fetch('http://localhost:3000/api/profile');
+    userProfile.value = await response.json();
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+  }
 }
 
 async function fetchArticles(reset = false) {
@@ -230,15 +299,6 @@ async function fetchCategories() {
   }
 }
 
-async function fetchTopics() {
-  try {
-    const response = await fetch('http://localhost:3000/api/topics');
-    topics.value = await response.json();
-  } catch (error) {
-    console.error('Error fetching topics:', error);
-  }
-}
-
 async function trackClick(articleId) {
   try {
     await fetch(`http://localhost:3000/api/articles/${articleId}/interaction`, {
@@ -246,6 +306,12 @@ async function trackClick(articleId) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'click' })
     });
+    
+    // Update user interactions and refresh profile
+    userInteractions.value.set(articleId, 'click');
+    if (isForYou.value) {
+      setTimeout(() => fetchUserProfile(), 500); // Refresh profile after interaction
+    }
   } catch (error) {
     console.error('Error tracking click:', error);
   }
@@ -265,6 +331,9 @@ async function rateArticle(articleId, type) {
     });
 
     userInteractions.value.set(articleId, type);
+    
+    // Refresh user profile after interaction
+    setTimeout(() => fetchUserProfile(), 500);
   } catch (error) {
     console.error('Error rating article:', error);
   }
@@ -293,61 +362,17 @@ function handleSortChange() {
   fetchArticles(true);
 }
 
-function getTopicTerms(topicId) {
-  const topic = topics.value.find(t => t.id === topicId);
-  if (!topic) return '';
-  
-  // Parse the terms and get the top 3 most probable terms
-  const terms = JSON.parse(topic.terms)
-    .sort((a, b) => b.probability - a.probability)
-    .slice(0, 3)
-    .map(t => t.term)
-    .join(', ');
-    
-  return terms;
-}
-
-function getArticleTopics(article) {
-  if (!article.topic_indices || !article.topic_scores) return [];
-  
-  const topicIndices = JSON.parse(article.topic_indices);
-  const topicScores = JSON.parse(article.topic_scores);
-  
-  // Only show topics with score > 0.2 (20% relevance)
-  return topicIndices.filter((topicId, index) => {
-    return topicScores[index].score > 0.2 && topics.value.find(t => t.id === topicId);
-  });
-}
-
-function getArticleTopicsWithScores(article) {
-  if (!article.topic_indices || !article.topic_scores) return [];
-  
-  const topicIndices = JSON.parse(article.topic_indices);
-  const topicScores = JSON.parse(article.topic_scores);
-  
-  // Only show topics with score > 0.2 (20% relevance)
-  return topicIndices.map((topicId, index) => {
-    return {
-      id: topicId,
-      score: topicScores[index].score
-    };
-  }).filter(topic => topic.score > 0.2 && topics.value.find(t => t.id === topic.id));
-}
-
-function getTopicTotalScore(article) {
-  if (!article.topic_scores) return 0;
-  const scores = JSON.parse(article.topic_scores);
-  return scores.reduce((total, score) => total + score.score, 0);
-}
-
 watch([selectedCategory, isForYou], () => {
   fetchArticles(true);
+  if (isForYou.value) {
+    fetchUserProfile();
+  }
 });
 
 onMounted(() => {
   fetchCategories();
+  fetchUserProfile();
   fetchArticles();
-  fetchTopics(); // Add topics fetch
 });
 </script>
 

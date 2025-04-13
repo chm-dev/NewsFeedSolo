@@ -6,8 +6,13 @@
 
 import express from 'express';
 import cors from 'cors';
-import { getArticles, getRecommendedArticles, trackInteraction, getActiveTopics } from './database.js';
-import { updateTopicModel } from './topicAnalyzer.js';
+import { 
+    getArticles, 
+    getRecommendedArticles, 
+    trackInteraction, 
+    buildKeywordProfile,
+    getSimilarArticles 
+} from './database.js';
 import Database from 'better-sqlite3';
 import path from 'path';
 
@@ -73,6 +78,24 @@ app.get('/api/recommendations', async (req, res) => {
     }
 });
 
+// Get similar articles
+app.get('/api/articles/:id/similar', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { limit = 5 } = req.query;
+        
+        const similarArticles = await getSimilarArticles(
+            parseInt(id),
+            parseInt(limit)
+        );
+        
+        res.json(similarArticles);
+    } catch (error) {
+        console.error('Error fetching similar articles:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Track article interaction
 app.post('/api/articles/:id/interaction', async (req, res) => {
     try {
@@ -96,24 +119,13 @@ app.post('/api/articles/:id/interaction', async (req, res) => {
     }
 });
 
-// Get topics
-app.get('/api/topics', async (req, res) => {
+// Get user preference profile
+app.get('/api/profile', (req, res) => {
     try {
-        const topics = getActiveTopics();
-        res.json(topics);
+        const profile = buildKeywordProfile();
+        res.json(profile);
     } catch (error) {
-        console.error('Error fetching topics:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// Admin: Get current topics
-app.get('/api/admin/topics', async (req, res) => {
-    try {
-        const topics = await getActiveTopics();
-        res.json(topics);
-    } catch (error) {
-        console.error('Error fetching topics:', error);
+        console.error('Error building user profile:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -138,9 +150,16 @@ app.get('/api/admin/stats', async (req, res) => {
             GROUP BY interaction_type
         `).all(threeDaysAgo.toISOString());
 
+        const profile = buildKeywordProfile();
+
         res.json({
             recentArticlesCount: recentArticles.length,
-            interactions
+            interactions,
+            profile: {
+                keywordCount: profile.keywords.length,
+                topKeywords: profile.keywords.slice(0, 10),
+                categoryPreferences: profile.categories
+            }
         });
     } catch (error) {
         console.error('Error fetching stats:', error);
@@ -148,79 +167,7 @@ app.get('/api/admin/stats', async (req, res) => {
     }
 });
 
-// Admin: Get topic weights
-app.get('/api/admin/topic-weights', async (req, res) => {
-    try {
-        const threeDaysAgo = new Date();
-        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-
-        const weights = db.prepare(`
-            WITH RECURSIVE
-            article_topics AS (
-                -- Extract topic IDs and articles they belong to, along with their scores
-                SELECT 
-                    a.id as article_id,
-                    CAST(json_each.value AS INTEGER) as topic_id,
-                    CAST(json_extract(json_each2.value, '$.score') AS FLOAT) as topic_score
-                FROM articles a
-                CROSS JOIN json_each(a.topic_indices) as json_each
-                JOIN json_each(a.topic_scores) as json_each2
-                WHERE a.stored_at >= ?
-                AND json_each.key = json_each2.key  -- Ensure we match the correct score with each topic
-            ),
-            topic_weights AS (
-                -- Calculate weights for each topic based on interactions, weighted by topic relevance
-                SELECT 
-                    at.topic_id,
-                    SUM(
-                        at.topic_score * 
-                        CASE 
-                            WHEN i.interaction_type = 'thumbs_up' THEN 5.0
-                            WHEN i.interaction_type = 'thumbs_down' THEN -3.0
-                            WHEN i.interaction_type = 'click' THEN 1.0
-                            ELSE 0 
-                        END
-                    ) as weight
-                FROM article_topics at
-                LEFT JOIN article_interactions i ON at.article_id = i.article_id
-                GROUP BY at.topic_id
-            )
-            -- Get weights for all active topics, defaulting to 0 for topics without interactions
-            SELECT t.id as topic_id, COALESCE(tw.weight, 0) as weight
-            FROM topics t
-            LEFT JOIN topic_weights tw ON t.id = tw.topic_id
-            WHERE t.active = 1
-        `).all(threeDaysAgo.toISOString());
-
-        // Convert to object for easier lookup in frontend
-        const weightMap = Object.fromEntries(
-            weights.map(w => [w.topic_id, w.weight])
-        );
-        
-        res.json(weightMap);
-    } catch (error) {
-        console.error('Error fetching topic weights:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// Start the server and initialize topic analysis
+// Start the server
 app.listen(port, () => {
     console.log(`API server running at http://localhost:${port}`);
-    // Start topic analysis with a delay to avoid blocking API responses
-    setTimeout(() => {
-        console.log('Starting topic analysis...');
-        updateTopicModel().catch(err => {
-            console.error('Error in topic analysis:', err);
-        });
-    }, 5000); // 5 second delay
 });
-
-// Schedule topic analysis every 6 hours
-const SIX_HOURS = 6 * 60 * 60 * 1000;
-setInterval(() => {
-    console.log('[Server] Running scheduled topic analysis');
-    updateTopicModel().catch(err => {
-        console.error('Error in scheduled topic analysis:', err);
-    });
-}, SIX_HOURS);

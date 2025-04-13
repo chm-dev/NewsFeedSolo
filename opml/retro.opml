@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="1.0">
+
+    <head>
+        <title>Retrogaming feeds</title>
+        <dateCreated>Sat, 12 Apr 2025 14:28:08 -0500</dateCreated>
+    </head>
+
+    <body>
+        <outline text="Retrogaming feeds" title="DIY feeds">
+            <outline text="CSDB" title="CSDB" type="rss" xmlUrl="https://csdb.dk/rss/scenenews.php" htmlUrl="https://csdb.dk" />
+            <outline text="RetroRGB" title="RetroRGB" type="rss" xmlUrl="https://www.retrorgb.com/category/retrorgb/feed" htmlUrl="https://www.retrorgb.com" />
+        
+
+        </outline>
+    </body>
+</opml>
