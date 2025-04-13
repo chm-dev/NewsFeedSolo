@@ -152,6 +152,9 @@ The application features a keyword-based recommendation system:
 - **Time-Decay Algorithm**: Recent interactions have higher weight (30-day half-life)
 - **Multifactor Scoring**: Combines keyword matching, category preferences, source preferences, and recency
 - **Content Similarity**: Finds similar articles based on keyword overlap
+- **Configurable Weights**: All recommendation weights can be adjusted via environment variables
+
+For a detailed explanation of all recommendation system parameters, scoring algorithms, and tuning guidance, see [RECOMMENDATION_SYSTEM.md](./RECOMMENDATION_SYSTEM.md).
 
 ### Recommendation Factors
 
@@ -161,6 +164,24 @@ Articles are scored based on multiple factors:
 - **Source preference (20%)**: User's historical interaction with content sources
 - **Recency (20%)**: Newer content receives a boost
 - **Direct interaction**: Additional boost for articles directly interacted with
+
+### Configurable Parameters
+
+All recommendation scoring weights are configurable through environment variables:
+
+- **Factor Weights**:
+  - `KEYWORD_MATCH_WEIGHT=0.4` - Weight for keyword matching
+  - `CATEGORY_WEIGHT=0.2` - Weight for category preference
+  - `SOURCE_WEIGHT=0.2` - Weight for source preference
+  - `RECENCY_WEIGHT=0.2` - Weight for recency score
+
+- **Interaction Weights**:
+  - `THUMBS_UP_WEIGHT=5.0` - Weight for "thumbs up" interactions
+  - `THUMBS_DOWN_WEIGHT=-3.0` - Weight for "thumbs down" interactions
+  - `CLICK_WEIGHT=1.0` - Weight for article click interactions
+
+- **Time Decay**:
+  - `INTERACTION_DECAY_DAYS=30` - Half-life period (in days) for the interaction decay algorithm
 
 ## API Endpoints
 

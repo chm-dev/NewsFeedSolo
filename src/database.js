@@ -9,6 +9,19 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import { promises as fs } from 'fs';
 import { extractArticleKeywords } from './keywordExtractor.js';
+import 'dotenv/config';
+
+// Read scoring weights from environment variables or use defaults
+const KEYWORD_MATCH_WEIGHT = parseFloat(process.env.KEYWORD_MATCH_WEIGHT || 0.4);
+const CATEGORY_WEIGHT = parseFloat(process.env.CATEGORY_WEIGHT || 0.2);
+const SOURCE_WEIGHT = parseFloat(process.env.SOURCE_WEIGHT || 0.2);
+const RECENCY_WEIGHT = parseFloat(process.env.RECENCY_WEIGHT || 0.2);
+const INTERACTION_DECAY_DAYS = parseFloat(process.env.INTERACTION_DECAY_DAYS || 30);
+
+// Read interaction weights from environment variables or use defaults
+const THUMBS_UP_WEIGHT = parseFloat(process.env.THUMBS_UP_WEIGHT || 5.0);
+const THUMBS_DOWN_WEIGHT = parseFloat(process.env.THUMBS_DOWN_WEIGHT || -3.0);
+const CLICK_WEIGHT = parseFloat(process.env.CLICK_WEIGHT || 1.0);
 
 const DB_FILE = path.join(process.cwd(), 'storage', 'news.db');
 
@@ -227,14 +240,14 @@ function buildKeywordProfile() {
             // Apply time decay - more recent interactions count more
             const interactionDate = new Date(interaction.created_at);
             const daysSinceInteraction = (Date.now() - interactionDate) / (1000 * 60 * 60 * 24);
-            const decayFactor = Math.exp(-daysSinceInteraction / 30); // 30-day half-life
+            const decayFactor = Math.exp(-daysSinceInteraction / INTERACTION_DECAY_DAYS); // 30-day half-life
             
             // Set base weight based on interaction type
             let baseWeight = 0;
             switch (interaction.interaction_type) {
-                case 'thumbs_up': baseWeight = 5.0; break;
-                case 'thumbs_down': baseWeight = -3.0; break;
-                case 'click': baseWeight = 1.0; break;
+                case 'thumbs_up': baseWeight = THUMBS_UP_WEIGHT; break;
+                case 'thumbs_down': baseWeight = THUMBS_DOWN_WEIGHT; break;
+                case 'click': baseWeight = CLICK_WEIGHT; break;
             }
             
             const weight = baseWeight * decayFactor;
@@ -309,7 +322,7 @@ function scoreArticle(article, profile) {
     const sourceMap = new Map(profile.sources.map(s => [s.name, s.weight]));
     const categoryMap = new Map(profile.categories.map(c => [c.name, c.weight]));
     
-    // 1. Keyword score (40% of total)
+    // 1. Keyword score
     let keywordScore = 0;
     let keywordMatchCount = 0;
     try {
@@ -324,22 +337,30 @@ function scoreArticle(article, profile) {
         if (keywords.length > 0) {
             keywordScore = keywordScore / Math.sqrt(keywords.length);
         }
+        
+        // Apply KEYWORD_MATCH_WEIGHT to get the weighted score for display
+        keywordScore = keywordScore * KEYWORD_MATCH_WEIGHT;
     } catch (e) {
         console.error(`Error parsing keywords for article ${article.id}:`, e);
     }
     
-    // 2. Source score (20% of total)
-    const sourceScore = sourceMap.get(article.feed_title) || 0;
+    // 2. Source score with weight applied for display
+    const sourceScore = (sourceMap.get(article.feed_title) || 0) * SOURCE_WEIGHT;
     
-    // 3. Category score (20% of total)
-    const categoryScore = categoryMap.get(article.feed_category) || 0;
+    // 3. Category score with weight applied for display
+    const categoryScore = (categoryMap.get(article.feed_category) || 0) * CATEGORY_WEIGHT;
     
-    // 4. Recency score (20% of total)
+    // 4. Recency score 
     let recencyScore = 0;
     try {
         const publishDate = new Date(article.published_at);
         const daysSincePublished = (Date.now() - publishDate) / (1000 * 60 * 60 * 24);
-        recencyScore = Math.exp(-daysSincePublished / 7); // 7-day half-life
+        
+        // Calculate base recency score using 7-day half-life
+        const baseRecencyScore = Math.exp(-daysSincePublished / 7);
+        
+        // Apply weight to raw recency score for better visibility in logs/debugging
+        recencyScore = baseRecencyScore * RECENCY_WEIGHT;
     } catch (e) {
         console.error(`Error calculating recency for article ${article.id}:`, e);
     }
@@ -354,14 +375,8 @@ function scoreArticle(article, profile) {
         console.error(`Error getting interaction score for article ${article.id}:`, e);
     }
     
-    // Calculate weighted total score
-    const totalScore = (
-        (keywordScore * 0.4) + 
-        (sourceScore * 0.2) + 
-        (categoryScore * 0.2) + 
-        (recencyScore * 0.2) +
-        interactionScore // Direct interactions get added directly
-    );
+    // Calculate total score - now add the components directly since weights are already applied
+    const totalScore = keywordScore + sourceScore + categoryScore + recencyScore + interactionScore;
     
     return {
         keywordScore,
@@ -399,9 +414,9 @@ async function getArticles(options = {}) {
                 (
                     SELECT COALESCE(SUM(
                         CASE 
-                            WHEN interaction_type = 'thumbs_up' THEN 5.0 * EXP(-(julianday('now') - julianday(created_at))/30.0)
-                            WHEN interaction_type = 'thumbs_down' THEN -3.0 * EXP(-(julianday('now') - julianday(created_at))/30.0)
-                            WHEN interaction_type = 'click' THEN 1.0 * EXP(-(julianday('now') - julianday(created_at))/30.0)
+                            WHEN interaction_type = 'thumbs_up' THEN ${THUMBS_UP_WEIGHT} * EXP(-(julianday('now') - julianday(created_at))/${INTERACTION_DECAY_DAYS}.0)
+                            WHEN interaction_type = 'thumbs_down' THEN ${THUMBS_DOWN_WEIGHT} * EXP(-(julianday('now') - julianday(created_at))/${INTERACTION_DECAY_DAYS}.0)
+                            WHEN interaction_type = 'click' THEN ${CLICK_WEIGHT} * EXP(-(julianday('now') - julianday(created_at))/${INTERACTION_DECAY_DAYS}.0)
                             ELSE 0 
                         END
                     ), 0)
@@ -553,9 +568,9 @@ function getRecommendedArticles(options = {}) {
                 (
                     SELECT COALESCE(SUM(
                         CASE 
-                            WHEN interaction_type = 'thumbs_up' THEN 5.0 * EXP(-(julianday('now') - julianday(created_at))/30.0)
-                            WHEN interaction_type = 'thumbs_down' THEN -3.0 * EXP(-(julianday('now') - julianday(created_at))/30.0)
-                            WHEN interaction_type = 'click' THEN 1.0 * EXP(-(julianday('now') - julianday(created_at))/30.0)
+                            WHEN interaction_type = 'thumbs_up' THEN ${THUMBS_UP_WEIGHT} * EXP(-(julianday('now') - julianday(created_at))/${INTERACTION_DECAY_DAYS}.0)
+                            WHEN interaction_type = 'thumbs_down' THEN ${THUMBS_DOWN_WEIGHT} * EXP(-(julianday('now') - julianday(created_at))/${INTERACTION_DECAY_DAYS}.0)
+                            WHEN interaction_type = 'click' THEN ${CLICK_WEIGHT} * EXP(-(julianday('now') - julianday(created_at))/${INTERACTION_DECAY_DAYS}.0)
                             ELSE 0 
                         END
                     ), 0)
@@ -671,9 +686,9 @@ function getSimilarArticles(articleId, limit = 5) {
                 (
                     SELECT COALESCE(SUM(
                         CASE 
-                            WHEN interaction_type = 'thumbs_up' THEN 5.0
-                            WHEN interaction_type = 'click' THEN 1.0
-                            WHEN interaction_type = 'thumbs_down' THEN -3.0
+                            WHEN interaction_type = 'thumbs_up' THEN ${THUMBS_UP_WEIGHT}
+                            WHEN interaction_type = 'click' THEN ${CLICK_WEIGHT}
+                            WHEN interaction_type = 'thumbs_down' THEN ${THUMBS_DOWN_WEIGHT}
                             ELSE 0 
                         END
                     ), 0)
