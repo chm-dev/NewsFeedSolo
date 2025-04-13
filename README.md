@@ -1,4 +1,4 @@
-# News Collector
+# NewsFeedSolo
 
 **IMPORTANT NOTE: This is currently a Proof of Concept (POC) project intended to demonstrate the feasibility of automated news collection and analysis. It is not intended for production use without further development and hardening.**
 
@@ -34,7 +34,7 @@ While functional, some areas would need further development for production use:
 ## Project Structure
 
 ```
-NewsCollector/
+NewsFeedSolo/
 ├── src/                    # Backend source code
 │   ├── index.js           # Main collector entry point
 │   ├── server.js          # API server
@@ -110,8 +110,8 @@ Articles are scored based on multiple factors:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/news-collector.git
-   cd news-collector
+   git clone https://github.com/yourusername/newsfeedsolo.git
+   cd newsfeedsolo
    ```
 
 2. Install backend dependencies:
