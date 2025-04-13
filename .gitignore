@@ -19,7 +19,7 @@ yarn-error.log*
 .env.production.local
 
 # Database files in dev mode
-# storage/news.db
+storage/
 # utils/storage/news.db
 
 # Editor directories and files
