@@ -23,6 +23,75 @@ While functional, some areas would need further development for production use:
 - Production-grade logging and monitoring
 - Additional test coverage
 
+## Algorithm & Technology Details
+
+### Content Processing Algorithms
+
+1. **Article Content Extraction**:
+   - Uses [@extractus/article-extractor](https://github.com/extractus/article-extractor) to identify and extract the main content from HTML web pages
+   - Removes boilerplate elements, advertisements, and navigation components
+   - Preserves the primary text, images, and semantic structure of articles
+
+2. **Keyword Extraction Pipeline**:
+   - **Primary Method**: OpenAI GPT-4o mini model with a specialized tagging prompt
+     - Intelligently identifies 4-7 relevant tags per article
+     - Performs linguistic analysis to extract meaningful topics beyond simple frequency counting
+   - **Fallback Method**: Google Natural Language API (Entity Analysis)
+     - Identifies entities with salience scores
+     - Filters by configurable salience threshold (default 0.01)
+     - Limits to configurable maximum keywords per article
+
+3. **Advanced Content Organization**:
+   - Keyword-based article organization without complex topic modeling
+   - Efficient content categorization through feed categories and keyword metadata
+   - Content similarity analysis based on keyword overlap with normalized scoring
+   - Dynamic content relationships through user interaction patterns
+
+### Recommendation System Architecture
+
+1. **User Profile Generation**:
+   - Builds keyword profiles based on user interaction history
+   - Implements a time-decay algorithm with 30-day half-life for recency bias
+   - Weighs interactions by type (thumbs_up: 5.0, click: 1.0, thumbs_down: -3.0)
+
+2. **Multi-factor Scoring Algorithm**:
+   - Keyword matching (40%): Compares article keywords against user profile keywords
+   - Category preference (20%): Based on historical category interactions
+   - Source preference (20%): Based on historical source interactions
+   - Recency score (20%): Exponential decay based on article age
+   - Direct interaction boost: Additional score for previously interacted articles
+
+3. **Content Similarity Engine**:
+   - Identifies similar articles through keyword overlap analysis
+   - Calculates similarity score using a normalized vector comparison:
+     ```
+     similarityScore = matchingKeywords.length / √(sourceKeywords.length × targetKeywords.length)
+     ```
+   - Combines similarity with user interaction for final ranking
+   - Filters to ensure minimum relevance threshold
+
+## Libraries and Technologies
+
+### Backend
+- **Node.js**: JavaScript runtime environment
+- **Express**: Web server framework
+- **Better-SQLite3**: SQLite database driver with performance optimizations
+- **RSS Parser**: For fetching and parsing RSS feeds
+- **Natural**: NLP library for text processing and tokenization
+- **Stopword**: For removing common stopwords from text
+- **OpenAI API**: For advanced keyword extraction using GPT-4o mini
+- **Google Cloud Natural Language API**: For entity analysis and backup keyword extraction
+- **Axios**: Promise-based HTTP client for fetching article content
+- **dotenv**: Environment variable management
+- **xml2js**: XML parsing for OPML files
+- **Turndown**: HTML to Markdown conversion
+
+### Frontend
+- **Vue.js 3**: Frontend framework with Composition API
+- **Vite**: Build tool and development server
+- **TailwindCSS**: Utility-first CSS framework for styling
+- **PostCSS/Autoprefixer**: CSS processing and browser compatibility
+
 ## Features
 
 - **OPML Parsing**: Parse OPML files to extract RSS feed information
@@ -63,7 +132,6 @@ NewsFeedSolo/
 │   └── us_politics.opml  # US politics news feeds
 ├── storage/              # Article storage
 │   ├── news.db          # SQLite database
-│   └── category/        # Raw article content by category
 └── utils/               # Utility scripts
     └── migrate.js       # Database migration tools
 ```
@@ -151,6 +219,18 @@ Articles are scored based on multiple factors:
 
 Configure the application through environment variables or modify the source files:
 
+1. Copy the example environment file to create your own:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edit the `.env` file with your specific configuration:
+   - API keys for OpenAI and Google Cloud
+   - Database configuration
+   - Content extraction settings
+   - Collection and recommendation parameters
+
+Other configuration files:
 - `src/index.js`: Collector settings
 - `src/server.js`: API server configuration
 - `src/database.js`: Recommendation system parameters

@@ -60,16 +60,7 @@ async function initializeDatabase() {
             author TEXT,
             stored_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),  -- Store in ISO 8601 format
             metadata JSON,
-            keywords JSON,
-            topic_indices JSON,  -- Array of relevant topic indices
-            topic_scores JSON    -- Array of topic relevance scores
-        );
-
-        CREATE TABLE IF NOT EXISTS topics (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            terms JSON NOT NULL,         -- Array of {term, probability} objects
-            created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-            active BOOLEAN DEFAULT 1     -- Flag to mark current active topic set
+            keywords JSON
         );
 
         CREATE TABLE IF NOT EXISTS article_interactions (
@@ -85,7 +76,6 @@ async function initializeDatabase() {
         CREATE INDEX IF NOT EXISTS idx_articles_stored ON articles(stored_at);
         CREATE INDEX IF NOT EXISTS idx_article_interactions ON article_interactions(article_id, interaction_type);
         CREATE INDEX IF NOT EXISTS idx_articles_keywords ON articles(keywords);
-        CREATE INDEX IF NOT EXISTS idx_topics_active ON topics(active);
     `);
 
     return db;
@@ -616,129 +606,6 @@ function getRecommendedArticles(options = {}) {
 }
 
 /**
- * Store topics extracted from articles
- * @param {Array} topics - Array of topics with their terms and probabilities
- * @returns {Object} - Result with status and topic ids
- */
-function storeTopics(topics) {
-    try {
-        if (!db) initializeDatabase();
-
-        // Deactivate old topics
-        db.prepare('UPDATE topics SET active = 0').run();
-
-        // Store new topics
-        const stmt = db.prepare('INSERT INTO topics (terms) VALUES (?)');
-        
-        const results = topics.map(topic => {
-            const result = stmt.run(JSON.stringify(topic));
-            return result.lastInsertRowid;
-        });
-
-        return {
-            success: true,
-            topicIds: results
-        };
-    } catch (error) {
-        console.error('Error storing topics:', error);
-        return {
-            success: false,
-            error: error.message
-        };
-    }
-}
-
-/**
- * Update article's topic relationships
- * @param {number} articleId - ID of the article
- * @param {Array} topicIndices - Array of relevant topic indices
- * @param {Array} topicScores - Array of topic relevance scores
- * @returns {Object} - Result with status
- */
-function updateArticleTopics(articleId, topicIndices, topicScores) {
-    try {
-        if (!db) initializeDatabase();
-        
-        // Check if topic_indices column exists
-        let hasTopicColumns = false;
-        try {
-            const tableInfo = db.prepare("PRAGMA table_info(articles)").all();
-            const columnNames = tableInfo.map(col => col.name);
-            hasTopicColumns = columnNames.includes('topic_indices') && columnNames.includes('topic_scores');
-    
-        } catch (err) {
-            console.error('Error checking table schema for topic update:', err);
-            hasTopicColumns = false;
-        }
-        
-        // If the columns don't exist, add them
-        if (!hasTopicColumns) {
-            try {
-                db.exec(`
-                    ALTER TABLE articles ADD COLUMN topic_indices JSON;
-                    ALTER TABLE articles ADD COLUMN topic_scores JSON;
-                `);
-                console.log('Topic columns added successfully');
-                hasTopicColumns = true;
-            } catch (err) {
-                console.error('Error adding topic columns:', err);
-                return {
-                    success: false,
-                    error: 'Failed to add topic columns: ' + err.message
-                };
-            }
-        }
-
-        // Now update the article with topic information
-        // Use the topic indices directly without mapping to IDs
-        const stmt = db.prepare(`
-            UPDATE articles 
-            SET topic_indices = ?, topic_scores = ?
-            WHERE id = ?
-        `);
-
-        stmt.run(
-            JSON.stringify(topicIndices),
-            JSON.stringify(topicScores),
-            articleId
-        );
-
-        return { success: true };
-    } catch (error) {
-        console.error('Error updating article topics:', error);
-        return {
-            success: false,
-            error: error.message
-        };
-    }
-}
-
-/**
- * Get current active topics
- * @returns {Array} - Array of active topics
- */
-function getActiveTopics() {
-    try {
-        console.log('Getting active topics...');
-        
-        if (!db) {
-            console.log('Initializing database for active topics...');
-            initializeDatabase();
-        }
-        
-        // Use a simpler query that's less likely to hang
-        const stmt = db.prepare('SELECT id, terms, created_at FROM topics WHERE active = 1 LIMIT 20');
-        const results = stmt.all();
-        
-        console.log(`Retrieved ${results.length} active topics`);
-        return results;
-    } catch (error) {
-        console.error('Error getting active topics:', error);
-        return [];
-    }
-}
-
-/**
  * Check if an article with the given URL already exists in the database
  * @param {string} url - URL to check (will match against guid or link fields)
  * @returns {Promise<boolean>} - True if the URL exists, false otherwise
@@ -884,9 +751,6 @@ export {
     closeDatabase,
     trackInteraction,
     getRecommendedArticles,
-    storeTopics,
-    updateArticleTopics,
-    getActiveTopics,
     checkUrlExists,
     buildKeywordProfile,
     scoreArticle,
