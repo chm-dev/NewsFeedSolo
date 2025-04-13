@@ -54,7 +54,7 @@
             <!-- Keywords -->
             <div>
               <h3 class="text-md font-medium text-gray-700 mb-2">Keywords ( {{ stats.profile.keywordCount }})</h3>
-              <div class="flex flex-wrap gap-2 max-h-96 overflow-y-auto">
+              <div class="flex flex-wrap gap-2 ">
                 <span v-for="keyword in stats.profile.keywords" :key="keyword.name"
                       class="px-2 py-1 rounded-md text-sm flex items-center"
                       :class="getKeywordClass(keyword.weight)">
