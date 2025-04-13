@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="1.0">
+
+    <head>
+        <title>DIY RSS feeds</title>
+        <dateCreated>Sat, 12 Apr 2025 14:28:08 -0500</dateCreated>
+    </head>
+
+    <body>
+        <outline text="DIY feeds" title="DIY feeds">
+            <outline text="Hackaday" title="Hackaday" type="rss" xmlUrl="https://hackaday.com/feed/" htmlUrl="https://hackaday.com" />
+            <outline text="Makezine" title="Makezine" type="rss" xmlUrl="https://makezine.com/feed/" htmlUrl="https://makezine.com" />
+            <outline text="Geeky Gadgets" title="Geeky Gadgets" type="rss" xmlUrl="https://www.geeky-gadgets.com/category/diy/feed/" htmlUrl="https://www.geeky-gadgets.com" />
+        </outline>
+    </body>
+</opml>

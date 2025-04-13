@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="1.0">
+
+    <head>
+        <title>US Politics feeds</title>
+        <dateCreated>Sat, 12 Apr 2025 14:28:08 -0500</dateCreated>
+    </head>
+
+    <body>
+        <outline text="US Politics feeds" title="US Politics feeds">
+            <outline text="Politico" title="Politico" type="rss" xmlUrl="https://www.politico.com/rss/politics08.xml" htmlUrl="https://www.politico.com" />
+            <outline text="The Hill" title="The Hill" type="rss" xmlUrl="https://thehill.com/rss/syndicator/19110" htmlUrl="https://thehill.com" />
+            <outline text="NPR Politics" title="NPR Politics" type="rss" xmlUrl="https://www.npr.org/rss/rss.php?id=1014" htmlUrl="https://www.npr.org/sections/politics/" />
+            <outline text="FiveThirtyEight Politics" title="FiveThirtyEight Politics" type="rss" xmlUrl="https://fivethirtyeight.com/politics/feed/" htmlUrl="https://fivethirtyeight.com/politics/" />
+            <outline text="RealClearPolitics" title="RealClearPolitics" type="rss" xmlUrl="https://www.realclearpolitics.com/rss/" htmlUrl="https://www.realclearpolitics.com/" />
+            <outline text="The Atlantic Politics" title="The Atlantic Politics" type="rss" xmlUrl="https://www.theatlantic.com/politics/feed/" htmlUrl="https://www.theatlantic.com/politics/" />
+            <outline text="The New York Times Politics" title="The New York Times Politics" type="rss" xmlUrl="https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml" htmlUrl="https://www.nytimes.com/section/politics" />
+            <outline text="The Washington Post Politics" title="The Washington Post Politics" type="rss" xmlUrl="https://www.washingtonpost.com/arcio/rss/category/politics/" htmlUrl="https://www.washingtonpost.com/politics/" />
+            <outline text="CNN Politics" title="CNN Politics" type="rss" xmlUrl="http://rss.cnn.com/rss/cnn_allpolitics.rss" htmlUrl="https://www.cnn.com/politics" />
+            <outline text="Atlantic" title="Atlantic" type="rss" xmlUrl="https://www.theatlantic.com/feed/all/" htmlUrl="https://www.theatlantic.com" />
+
+        </outline>
+    </body>
+</opml>

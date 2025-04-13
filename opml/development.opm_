@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="1.0">
+
+    <head>
+        <title>Development RSS feeds</title>
+        <dateCreated>Sat, 12 Apr 2025 14:28:08 -0500</dateCreated>
+    </head>
+
+    <body>
+        <outline text="OpenRSS Test" title="OpenRSS Test Feeds">
+            <outline text="Dev.to" title="Dev.to" type="rss" xmlUrl="https://dev.to/feed" htmlUrl="https://dev.to" />
+            <outline text="JetBrains Blog" title="JetBrains Blog" type="rss" xmlUrl="https://blog.jetbrains.com/feed/" htmlUrl="https://blog.jetbrains.com" />
+            <outline text="Smashing Magazine" title="Smashing Magazine" type="rss" xmlUrl="https://www.smashingmagazine.com/feed/" htmlUrl="https://www.smashingmagazine.com" />
+            <outline text="CSS Tricks" title="CSS Tricks" type="rss" xmlUrl="https://css-tricks.com/feed/" htmlUrl="https://css-tricks.com" />
+            <outline text="Hacker News" title="Hacker News" type="rss" xmlUrl="https://news.ycombinator.com/rss" htmlUrl="https://news.ycombinator.com" />
+            <outline text="TechCrunch" title="TechCrunch" type="rss" xmlUrl="https://feeds.feedburner.com/TechCrunch/" htmlUrl="https://techcrunch.com" />
+            <outline text="The Verge" title="The Verge" type="rss" xmlUrl="https://www.theverge.com/rss/index.xml" htmlUrl="https://www.theverge.com" />
+            <outline text="GitHub Blog" title="GitHub Blog" type="rss" xmlUrl="https://github.blog/feed/" htmlUrl="https://github.blog" />
+            
+        </outline>
+    </body>
+</opml>
