@@ -2,6 +2,40 @@
 
 This document explains the recommendation system parameters available in the `.env` file and how they impact article scoring and recommendations.
 
+## Table of Contents
+
+- [News Recommendation System: Scoring Parameters Explained](#news-recommendation-system-scoring-parameters-explained)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [User Profile Keywords and Time Decay](#user-profile-keywords-and-time-decay)
+    - [How Profile Keywords Work](#how-profile-keywords-work)
+    - [Time Decay Mechanism](#time-decay-mechanism)
+    - [Keyword Filtering and Cutoffs](#keyword-filtering-and-cutoffs)
+  - [Scoring Weights](#scoring-weights)
+    - [Factor Weights](#factor-weights)
+      - [`KEYWORD_MATCH_WEIGHT` (Default: 0.4)](#keyword_match_weight-default-04)
+      - [`CATEGORY_WEIGHT` (Default: 0.2)](#category_weight-default-02)
+      - [`SOURCE_WEIGHT` (Default: 0.2)](#source_weight-default-02)
+      - [`RECENCY_WEIGHT` (Default: 0.2)](#recency_weight-default-02)
+  - [Time Decay Parameters](#time-decay-parameters)
+    - [`RECENCY_HALF_LIFE_DAYS` (Default: 7)](#recency_half_life_days-default-7)
+    - [`INTERACTION_DECAY_DAYS` (Default: 30)](#interaction_decay_days-default-30)
+    - [`KEYWORD_PROFILE_MIN_WEIGHT` (Default: 0.2)](#keyword_profile_min_weight-default-02)
+  - [Interaction Weights](#interaction-weights)
+    - [`THUMBS_UP_WEIGHT` (Default: 5.0)](#thumbs_up_weight-default-50)
+    - [`THUMBS_DOWN_WEIGHT` (Default: -3.0)](#thumbs_down_weight-default--30)
+    - [`CLICK_WEIGHT` (Default: 1.0)](#click_weight-default-10)
+  - [Direct Interaction Score](#direct-interaction-score)
+  - [Final Score Calculation](#final-score-calculation)
+  - ["Just in" BOOST Parameters](#just-in-boost-parameters)
+    - [`JUST_IN_BOOST_WEIGHT` (Default: 5.0)](#just_in_boost_weight-default-50)
+    - [`JUST_IN_MIN_KEYWORD_MATCHES` (Default: 2)](#just_in_min_keyword_matches-default-2)
+    - [`JUST_IN_MAX_VIEWS` (Default: 5)](#just_in_max_views-default-5)
+  - [View Fatigue Parameters](#view-fatigue-parameters)
+    - [`VIEW_FATIGUE_FACTOR` (Default: 0.2)](#view_fatigue_factor-default-02)
+  - [Final Score Calculation](#final-score-calculation-1)
+  - [Balancing the Parameters](#balancing-the-parameters)
+
 ## Overview
 
 The recommendation system combines several factors to rank articles for users:
