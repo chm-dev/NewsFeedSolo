@@ -4,6 +4,10 @@
 
 A full-stack Node.js application for collecting, analyzing, and serving news articles from RSS feeds. This application parses OPML files containing RSS feed URLs, fetches articles, extracts the main content, performs keyword analysis, and serves content through a REST API with a Vue.js frontend.
 
+## Screenshot
+
+![NewsFeedSolo Interface](./assets/feed.jpg)
+
 ## Current State
 
 This project is a Proof of Concept that demonstrates:
