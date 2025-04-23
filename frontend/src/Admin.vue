@@ -100,6 +100,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import { API_URL } from './config';
 
 const stats = ref(null);
 // Get interaction decay days from environment variables or use the default
@@ -108,7 +109,7 @@ const keywordProfileMinWeight = 0.2; // Default value from .env
 
 async function fetchStats() {
   try {
-    const response = await fetch('http://localhost:3000/api/admin/stats');
+    const response = await fetch(`${API_URL}/admin/stats`);
     stats.value = await response.json();
   } catch(error) {
     console.error('Error fetching stats:', error);

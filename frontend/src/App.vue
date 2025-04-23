@@ -221,6 +221,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
+import { API_URL } from './config';
 
 const articles = ref([]);
 const categories = ref([]);
@@ -294,7 +295,7 @@ function getKeywordWeight(keyword) {
 
 async function fetchUserProfile() {
   try {
-    const response = await fetch('http://localhost:3000/api/profile');
+    const response = await fetch(`${API_URL}/profile`);
     userProfile.value = await response.json();
   } catch (error) {
     console.error('Error fetching user profile:', error);
@@ -308,7 +309,7 @@ async function fetchArticles(reset = false) {
     hasMoreArticles.value = true;
   }
 
-  const endpoint = isForYou.value ? '/api/recommendations' : '/api/articles';
+  const endpoint = isForYou.value ? '/recommendations' : '/articles';
   const params = new URLSearchParams({
     limit: LIMIT,
     offset: offset.value
@@ -322,7 +323,7 @@ async function fetchArticles(reset = false) {
   }
 
   try {
-    const response = await fetch(`http://localhost:3000${endpoint}?${params}`);
+    const response = await fetch(`${API_URL}${endpoint}?${params}`);
     const newArticles = await response.json();
     articles.value = reset ? newArticles : [...articles.value, ...newArticles];
     offset.value += LIMIT;
@@ -334,7 +335,7 @@ async function fetchArticles(reset = false) {
 
 async function fetchCategories() {
   try {
-    const response = await fetch('http://localhost:3000/api/categories');
+    const response = await fetch(`${API_URL}/categories`);
     categories.value = await response.json();
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -343,7 +344,7 @@ async function fetchCategories() {
 
 async function trackClick(articleId) {
   try {
-    await fetch(`http://localhost:3000/api/articles/${articleId}/interaction`, {
+    await fetch(`${API_URL}/articles/${articleId}/interaction`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'click' })
@@ -366,7 +367,7 @@ async function rateArticle(articleId, type) {
       return; // Already rated
     }
 
-    await fetch(`http://localhost:3000/api/articles/${articleId}/interaction`, {
+    await fetch(`${API_URL}/articles/${articleId}/interaction`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type })
