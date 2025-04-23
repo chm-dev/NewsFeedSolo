@@ -119,14 +119,34 @@ async function collectNews() {
   } catch (error) {
     console.error('Error in news collection process:', error);
     process.exit(1);
+  } finally {
+    // Import the closeDatabase function if it's not already imported
+    try {
+      // Close the database connection to allow the app to exit cleanly
+      const { closeDatabase } = await import('./database.js');
+      console.log('Closing database connection...');
+      closeDatabase();
+      console.log('Database connection closed. Application will exit normally.');
+      
+      // Force the process to exit after a short delay to ensure all resources are properly released
+      setTimeout(() => {
+        console.log('Forcing application exit...');
+        process.exit(0);
+      }, 500);
+    } catch (error) {
+      console.error('Error closing database connection:', error);
+      process.exit(1);
+    }
   }
 }
 
 // Run the application if this file is executed directly
-collectNews().catch(error => {
+try {
+  collectNews();
+} catch (error) {
   console.error('Fatal error:', error);
   process.exit(1);
-});
+}
 
 export {
   collectNews

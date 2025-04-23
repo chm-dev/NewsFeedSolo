@@ -17,6 +17,7 @@
             <outline text="Frontiers in Psychology" title="Frontiers in Psychology" type="rss" xmlUrl="https://www.frontiersin.org/journals/psychology/rss" htmlUrl="https://www.frontiersin.org/journals/psychology" />
             <outline text="Frontiers in Neuroscience" title="Frontiers in Neuroscience" type="rss" xmlUrl="https://www.frontiersin.org/journals/neuroscience/rss" htmlUrl="https://www.frontiersin.org/journals/neuroscience" />
             <outline text="NASA" title="NASA" type="rss" xmlUrl="https://science.nasa.gov/feed/" htmlUrl="https://www.nasa.gov" />
+            <outline text="BBC" title="BBC science" type="rss" xmlUrl="https://feeds.bbci.co.uk/news/science_and_environment/rss.xml" htmlUrl="https://www.bbc.com" />
             
         </outline>
     </body>
