@@ -50,7 +50,7 @@
         <!-- Category Navigation -->
         <nav class="flex space-x-4 mb-6 px-4 sm:px-0 overflow-x-auto sticky top-16 bg-gray-100 py-2">
           <button 
-            @click="selectedCategory = null; isForYou = true"
+            @click="selectedCategory = null; isForYou = true; fetchArticles(true)"
             :class="[
               'px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap',
               isForYou 
@@ -294,6 +294,8 @@ async function rateArticle(articleId, type) {
 function selectCategory(category) {
   selectedCategory.value = category;
   isForYou.value = false;
+  // Fetch articles for the selected category
+  fetchArticles(true);
 }
 
 function loadMore() {
