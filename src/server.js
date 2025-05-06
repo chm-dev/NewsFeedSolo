@@ -38,6 +38,7 @@ app.get('/api/articles', async (req, res) => {
             offset: parseInt(offset),
             sort
         });
+        // No longer update view counts automatically - this happens via Intersection Observer
         res.json(articles);
     } catch (error) {
         console.error('Error fetching articles:', error);
@@ -45,7 +46,7 @@ app.get('/api/articles', async (req, res) => {
     }
 });
 
-// Get a specific article by ID and increment view count
+// Get a specific article by ID
 app.get('/api/articles/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -57,11 +58,8 @@ app.get('/api/articles/:id', async (req, res) => {
             return res.status(404).json({ error: 'Article not found' });
         }
         
-        // Increment the view count
-        db.prepare('UPDATE articles SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?').run(id);
-        
-        // Return the article with the updated view count
-        article.view_count = (article.view_count || 0) + 1;
+        // No longer increment view count automatically
+        // View counts are now handled by the Intersection Observer
         
         res.json(article);
     } catch (error) {
@@ -97,25 +95,7 @@ app.get('/api/recommendations', async (req, res) => {
             offset: parseInt(offset)
         });
         
-        // Track view counts for all articles in the response
-        if (articles && articles.length > 0) {
-            const updateViewCountStmt = db.prepare('UPDATE articles SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?');
-            
-            const updateTransaction = db.transaction((articleIds) => {
-                for (const id of articleIds) {
-                    updateViewCountStmt.run(id);
-                }
-            });
-            
-            // Execute the updates in a transaction for better performance
-            updateTransaction(articles.map(article => article.id));
-            
-            // Update the view counts in the response objects
-            articles.forEach(article => {
-                article.view_count = (article.view_count || 0) + 1;
-            });
-        }
-        
+        // No longer update view counts automatically - this happens via Intersection Observer
         res.json(articles);
     } catch (error) {
         console.error('Error fetching recommendations:', error);
@@ -134,25 +114,7 @@ app.get('/api/articles/:id/similar', async (req, res) => {
             parseInt(limit)
         );
         
-        // Track view counts for all articles in the response
-        if (similarArticles && similarArticles.length > 0) {
-            const updateViewCountStmt = db.prepare('UPDATE articles SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?');
-            
-            const updateTransaction = db.transaction((articleIds) => {
-                for (const id of articleIds) {
-                    updateViewCountStmt.run(id);
-                }
-            });
-            
-            // Execute the updates in a transaction for better performance
-            updateTransaction(similarArticles.map(article => article.id));
-            
-            // Update the view counts in the response objects
-            similarArticles.forEach(article => {
-                article.view_count = (article.view_count || 0) + 1;
-            });
-        }
-        
+        // No longer update view counts automatically - this happens via Intersection Observer
         res.json(similarArticles);
     } catch (error) {
         console.error('Error fetching similar articles:', error);
@@ -179,6 +141,21 @@ app.post('/api/articles/:id/interaction', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error tracking interaction:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Update article view count
+app.post('/api/articles/:id/view', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Increment the view count
+        db.prepare('UPDATE articles SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?').run(id);
+        
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error updating view count:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

@@ -5,6 +5,32 @@
         <h1 class="text-2xl font-bold text-gray-900">News Feed</h1>
         <div class="flex items-center space-x-4">
           <router-link to="/admin" class="text-blue-600 hover:text-blue-800">Admin Panel</router-link>
+          
+          <!-- Layout Toggle Button -->
+          <div class="flex items-center space-x-2">
+            <span class="text-sm text-gray-600">Layout:</span>
+            <button 
+              @click="layoutType = 'grid'"
+              class="px-3 py-1 rounded-md text-sm"
+              :class="layoutType === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+            >
+              <svg class="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+              Grid
+            </button>
+            <button 
+              @click="layoutType = 'twitter'"
+              class="px-3 py-1 rounded-md text-sm"
+              :class="layoutType === 'twitter' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+            >
+              <svg class="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" />
+              </svg>
+              Twitter
+            </button>
+          </div>
+          
           <div class="flex items-center space-x-2">
             <label class="text-sm text-gray-600">Sort by:</label>
             <select 
@@ -93,116 +119,29 @@
           </div>
         </div>
 
-        <!-- Articles Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4 sm:px-0">
-          <article 
-            v-for="article in displayedArticles" 
-            :key="article.id"
-            class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
-          >
-            <a :href="article.link" target="_blank" rel="noopener noreferrer" class="block" @click="trackClick(article.id)">
-              <div class="aspect-w-16 aspect-h-9 bg-gray-100">
-                <img 
-                  v-if="article.image_url" 
-                  :src="article.image_url"
-                  :alt="article.title"
-                  class="w-full h-full object-cover"
-                  loading="lazy"
-                  @error="handleImageError"
-                >
-                <div v-else class="w-full h-full flex items-center justify-center text-gray-400 bg-gray-50">
-                  <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-              </div>
-              <div class="p-4">
-                <div class="flex items-center text-sm text-gray-500 mb-2">
-                  <span class="truncate">{{ article.feed_title }}</span>
-                  <span class="mx-2 flex-shrink-0">•</span>
-                  <span class="flex-shrink-0">{{ formatDate(article.published_at) }}</span>
-                  <span v-if="article.view_count !== undefined" class="flex items-center ml-auto">
-                    <svg class="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                    <span class="text-xs">{{ article.view_count }}</span>
-                  </span>
-                </div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">{{ article.title }}</h3>
-                <p class="text-gray-600 text-sm line-clamp-3 mb-3">{{ article.description }}</p>
-                
-                <!-- Keywords -->
-                <div v-if="article.keywords" class="mb-2">
-                  <div class="text-xs text-gray-500 mb-1">Keywords:</div>
-                  <div class="flex flex-wrap gap-1">
-                    <span v-for="(keyword, idx) in parseKeywords(article)" :key="`${article.id}-${idx}`"
-                          class="px-2 py-1 rounded-full text-xs flex items-center"
-                          :class="getKeywordClass(keyword)">
-                      {{ keyword }}
-                      <span v-if="getKeywordWeight(keyword) !== null" class="ml-1 font-medium">
-                        {{ getKeywordWeight(keyword).toFixed(1) }}
-                      </span>
-                    </span>
-                  </div>
-                </div>
-
-                <!-- Article Score (only in recommendations) -->
-                <div v-if="isForYou && article.final_score" class="mb-2">
-                  <div class="text-xs text-gray-500 mb-1">Relevance Scores:</div>
-                  <div class="flex flex-wrap gap-2 text-xs">
-                    <span v-if="article.keyword_score !== undefined" class="text-gray-600">
-                      Keywords: {{ Number(article.keyword_score).toFixed(1) }}
-                    </span>
-                    <span v-if="article.category_score !== undefined" class="text-gray-600">
-                      Category: {{ Number(article.category_score).toFixed(1) }}
-                    </span>
-                    <span v-if="article.source_score !== undefined" class="text-gray-600">
-                      Source: {{ Number(article.source_score).toFixed(1) }}
-                    </span>
-                    <span v-if="article.recency_score !== undefined" class="text-gray-600">
-                      Recency: {{ Number(article.recency_score).toFixed(1) }}
-                    </span>
-                    <span v-if="article.viewFatigueScore !== undefined && article.viewFatigueScore < 0" class="text-red-600">
-                      Fatigue: {{ Number(article.viewFatigueScore).toFixed(1) }}
-                    </span>
-                    <span v-if="article.justInBoost !== undefined && article.justInBoost > 0" class="text-purple-600 font-medium">
-                      Just In: {{ Number(article.justInBoost).toFixed(1) }}
-                    </span>
-                    <span class="font-bold text-blue-600">
-                      Total: {{ Number(article.final_score).toFixed(1) }}
-                    </span>
-                  </div>
-                  <div class="text-xs text-gray-500 mt-1">
-                    ID: {{ article.id }}
-                  </div>
-                </div>
-              </div>
-            </a>
-            
-            <!-- Thumbs buttons outside of the link -->
-            <div class="px-4 pb-4 flex justify-end space-x-2">
-              <button 
-                @click.stop="rateArticle(article.id, 'thumbs_up')"
-                class="p-2 rounded-full hover:bg-gray-100"
-                :class="{ 'text-green-600': hasInteraction(article.id, 'thumbs_up') }"
-              >
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" />
-                </svg>
-              </button>
-              <button 
-                @click.stop="rateArticle(article.id, 'thumbs_down')"
-                class="p-2 rounded-full hover:bg-gray-100"
-                :class="{ 'text-red-600': hasInteraction(article.id, 'thumbs_down') }"
-              >
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M18 9.5a1.5 1.5 0 11-3 0v-6a1.5 1.5 0 013 0v6zM14 9.667v-5.43a2 2 0 00-1.105-1.79l-.05-.025A4 4 0 0011.055 2H5.64a2 2 0 00-1.962 1.608l-1.2 6A2 2 0 004.44 12H8v4a2 2 0 002 2 1 1 0 001-1v-.667a4 4 0 01.8-2.4l1.4-1.866a4 4 0 00.8-2.4z" />
-                </svg>
-              </button>
-            </div>
-          </article>
+        <!-- Feed Layout -->
+        <div class="px-4 sm:px-0">
+          <!-- Grid Layout View -->
+          <GridFeedView 
+            v-if="layoutType === 'grid'"
+            :articles="displayedArticles"
+            :user-interactions="userInteractions"
+            :user-profile="userProfile"
+            :is-for-you="isForYou"
+            @track-click="trackClick"
+            @rate-article="rateArticle"
+          />
+          
+          <!-- Twitter Layout View -->
+          <TwitterFeedView 
+            v-else
+            :articles="displayedArticles"
+            :user-interactions="userInteractions"
+            :user-profile="userProfile"
+            :is-for-you="isForYou"
+            @track-click="trackClick"
+            @rate-article="rateArticle"
+          />
         </div>
 
         <!-- Load More Button -->
@@ -220,8 +159,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, nextTick, onUnmounted } from 'vue';
 import { API_URL } from './config';
+import GridFeedView from './components/GridFeedView.vue';
+import TwitterFeedView from './components/TwitterFeedView.vue';
 
 const articles = ref([]);
 const categories = ref([]);
@@ -232,6 +173,7 @@ const sortBy = ref('stored_at');
 const isForYou = ref(true); // Changed to true by default
 const userInteractions = ref(new Map());
 const userProfile = ref(null);
+const layoutType = ref('twitter'); // Changed default layout to twitter
 
 const LIMIT = 30;
 
@@ -243,31 +185,6 @@ function hasInteraction(articleId, type) {
   return userInteractions.value.get(articleId) === type;
 }
 
-function handleImageError(event) {
-  event.target.style.display = 'none';
-}
-
-function parseKeywords(article) {
-  try {
-    if (article.keywords) {
-      return JSON.parse(article.keywords).slice(0, 10); // Limit to 10 keywords
-    }
-    return [];
-  } catch (e) {
-    console.error('Error parsing keywords:', e);
-    return [];
-  }
-}
-
-function keywordMatch(keyword) {
-  // Check if keyword is in user's profile with a positive weight
-  if (!userProfile.value || !userProfile.value.keywords) return false;
-  
-  const match = userProfile.value.keywords.find(k => k.name === keyword);
-  return match && match.weight > 0;
-}
-
-// Function to determine color class based on keyword weight
 function getKeywordClass(keyword) {
   if (!userProfile.value || !userProfile.value.keywords) return 'bg-gray-100 text-gray-600';
   
@@ -283,14 +200,6 @@ function getKeywordClass(keyword) {
   } else {
     return 'bg-gray-100 text-gray-600'; // No weight or negative
   }
-}
-
-// Function to get keyword weight from user profile
-function getKeywordWeight(keyword) {
-  if (!userProfile.value || !userProfile.value.keywords) return null;
-  
-  const match = userProfile.value.keywords.find(k => k.name === keyword);
-  return match ? match.weight : null;
 }
 
 async function fetchUserProfile() {
@@ -382,16 +291,6 @@ async function rateArticle(articleId, type) {
   }
 }
 
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  }).format(date);
-}
-
 function selectCategory(category) {
   selectedCategory.value = category;
   isForYou.value = false;
@@ -405,17 +304,73 @@ function handleSortChange() {
   fetchArticles(true);
 }
 
-watch([selectedCategory, isForYou], () => {
-  fetchArticles(true);
-  if (isForYou.value) {
-    fetchUserProfile();
-  }
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(async (entry) => {
+    if (entry.isIntersecting) {
+      const articleId = entry.target.dataset.articleId;
+      if (!articleId || viewedArticles.has(articleId)) return;
+
+      viewedArticles.add(articleId);
+      try {
+        await fetch(`${API_URL}/articles/${articleId}/view`, {
+          method: 'POST',
+        });
+        
+        // Update local view count in UI without needing to refetch
+        const articleIndex = articles.value.findIndex(a => a.id.toString() === articleId);
+        if (articleIndex !== -1) {
+          articles.value[articleIndex].view_count = (articles.value[articleIndex].view_count || 0) + 1;
+        }
+      } catch (error) {
+        console.error('Error updating view count:', error);
+      }
+    }
+  });
+}, {
+  threshold: 0.5, // Element must be at least 50% visible
+  rootMargin: '0px' // No margin
+});
+
+const viewedArticles = new Set();
+
+function observeArticles() {
+  // Use nextTick to ensure DOM is updated
+  nextTick(() => {
+    const articleElements = document.querySelectorAll('[data-article-id]');
+    articleElements.forEach((el) => {
+      // Only observe elements that aren't already being observed
+      if (!el._isObserved) {
+        observer.observe(el);
+        el._isObserved = true;
+      }
+    });
+  });
+}
+
+// Clean up observer when component is unmounted
+onUnmounted(() => {
+  observer.disconnect();
+});
+
+watch(articles, () => {
+  // When articles change (new ones loaded), observe the new elements
+  observeArticles();
+}, { deep: false });
+
+// Watch for layout changes to re-observe articles
+watch(layoutType, () => {
+  // Give DOM time to update with new layout
+  nextTick(() => {
+    observeArticles();
+  });
 });
 
 onMounted(() => {
   fetchCategories();
   fetchUserProfile();
-  fetchArticles();
+  fetchArticles().then(() => {
+    observeArticles();
+  });
 });
 </script>
 
