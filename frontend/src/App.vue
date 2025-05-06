@@ -173,9 +173,15 @@ const sortBy = ref('stored_at');
 const isForYou = ref(true); // Changed to true by default
 const userInteractions = ref(new Map());
 const userProfile = ref(null);
-const layoutType = ref('twitter'); // Changed default layout to twitter
+// Get layout preference from localStorage or use 'twitter' as default
+const layoutType = ref(localStorage.getItem('preferred-layout') || 'twitter');
 
 const LIMIT = 30;
+
+// Save layout preference to localStorage whenever it changes
+watch(layoutType, (newLayout) => {
+  localStorage.setItem('preferred-layout', newLayout);
+});
 
 const displayedArticles = computed(() => {
   return articles.value;
